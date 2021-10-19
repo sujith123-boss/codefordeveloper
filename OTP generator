@@ -1,0 +1,15 @@
+#########################################################################################################################
+
+Function to generated OTP
+
+##########################################################################################################################
+
+
+def generate_OTP():
+    try:
+        n = 6
+        from random import randint
+        random_number = ''.join(["%s" % randint(0, 9) for num in range(0, n)])
+        return random_number
+    except Exception as err:
+        return None
