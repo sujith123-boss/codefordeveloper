@@ -1,0 +1,57 @@
+###############################################################################################################################
+
+Function for OTP check before changing password for user in AdminUser Model
+
+-With 5minute window for OTP validation
+
+################################################################################################################################
+
+
+@password_reset_api.route('/generateOtp', methods=['POST'])
+# Function to generate OTP for password reset
+def generateOtp():
+    try:
+        otp = generate_OTP()
+        data = request.get_json()
+        existing_user = AdminUser.query.filter_by(email_address=data['receiver_email']).first()
+        if not existing_user:
+            return failure("User not Found!!!")
+        else:
+            send_otp_email(data['receiver_email'], otp)
+            date_time = datetime.datetime.now() + datetime.timedelta(minutes=5)
+            existing_user.otp = otp
+            existing_user.otp_timer = date_time
+        if not update_item(existing_user):
+            return failure("Failed!!")
+        else:
+            return success(OTP_SUCCESS, [])
+    except Exception as e:
+        print(e)
+        return failure(e)
+        
+################################################################################################################################
+
+Function For Validating OTP
+Before changing User password from AdminUser Model
+
+################################################################################################################################
+
+@password_reset_api.route('/verifyOtp', methods=['POST'])
+# Function to verify OTP sent to the user
+def verify_otp():
+    try:
+        data = request.get_json()
+        otp = data['otp']
+        email = data['receiver_email']
+        current_date = datetime.datetime.now()
+        user = AdminUser.query.filter_by(otp=otp, email_address=email).first()
+        if user is None:
+            return failure("Please check the details entered and try again")
+        else:
+            if user.otp_timer < current_date:
+                return failure("OTP has expired, Please try again")
+            else:
+                return success(OTP_VERIFIED, [])
+    except Exception as e:
+        print(e)
+        return failure(e)
