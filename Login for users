@@ -1,0 +1,30 @@
+@route function
+def user_records():
+    try:
+        data = request.get_json()
+        password = data['password']
+        encoded = str(base64.b64encode(bytes(password, 'utf-8')))
+        existing_user = AdminUser.query.filter_by(email_address=data['email'],password=encoded).first()
+        existing_password = encoded
+        if not existing_user:
+            return failure("Email/Password is Incorrect")
+        elif existing_user and existing_user.status == 'Inactive':
+            return failure("User Not Active")
+        else:
+            login_history = LoginInfo()
+            if "login_type" in data and data["login_type"] != "":
+                if data["login_type"] == "Google":
+                    login_history.admin_user = existing_user.id
+                    update_item(login_history)
+                    return success("Success", get_user_data(data['email']))
+                else:
+                    login_history.admin_user = existing_user.id
+                    update_item(login_history)
+                    return success("Success", get_user_data(data['email'], existing_password))
+            else:
+
+                login_history.admin_user = existing_user.id
+                update_item(login_history)
+                return success("Success", get_user_data(data['email'], existing_password))
+    except Exception as e:
+        return failure("Something went wrong." + str(e))
