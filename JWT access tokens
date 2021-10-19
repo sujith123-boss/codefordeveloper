@@ -1,0 +1,30 @@
+def refreshToken():
+    try:
+        payload = request.get_json()
+        refresh_token = payload["refresh_token"]
+        try:
+            payload = jwt.decode(refresh_token, config.SECRET_KEY, algorithms=[config.JWT_ALGORITHM])
+        except jwt.ExpiredSignatureError:
+            return failure('Authentication timeout', 419)
+        except jwt.DecodeError:
+            return failure('Unauthorized', 401)
+        except jwt.InvalidTokenError:
+            return failure('Unauthorized', 401)
+        user_id = payload['identity']
+        user_query = AdminUser.query.filter_by(id=payload['identity'])
+        result = query_list_to_dict(user_query)
+        if len(result) > 0:
+            payload = payload['identity']
+            identity = {'identity': payload, "exp": get_auth_exp(config.JWT_TOKEN_TIME_OUT_IN_MINUTES)}
+            token = jwt.encode(identity, config.SECRET_KEY, config.JWT_ALGORITHM)
+            tk = token.decode("utf-8")
+
+            refres_identity = {'identity': payload, "exp": get_auth_exp(config.JWT_REFRESH_TOKEN_TIME_OUT_IN_MINUTES)}
+            refres_token = jwt.encode(refres_identity, config.SECRET_KEY, config.JWT_ALGORITHM)
+            refres_tk = refres_token.decode("utf-8")
+            token = {'token': str(tk), 'refresh_token': str(refres_tk)}
+            return success('success', token)
+        else:
+            return failure('Unauthorized', 401)
+    except Exception as err:
+        return failure('Unauthorized', 401)
