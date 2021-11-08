@@ -1,4 +1,42 @@
-@route function
+                                                                Register Function in Flask
+                                                                
+
+@app.route("/*Name of end point*",methods=[''])
+# Function to register account and send OTP email to verify user
+def candidate_list():
+    try:
+        if request.method == 'POST':
+            data = request.get_json()
+            candidate = register(data)
+            existing_user = Candidate.query.filter_by(email=data['email']).first()
+            if existing_user is not None:
+                return failure("User already exists")
+            else:
+                if not add_item(candidate):
+                    return failure("Please check and re-enter the data")
+                else:
+                    if "login_type" in data and data["login_type"] != "":
+                        if data["login_type"] == "Google":
+                            return success("Success", get_user_data(data['email']))
+                    else:
+                        otp = generate_OTP()
+                        data = request.get_json()
+                        existing_user = Candidate.query.filter_by(email=data['email']).first()
+                        if existing_user is None:
+                            raise Exception(Error.USER_NOT_FOUND)
+                        send_otp_email(data['email'], otp)
+                        existing_user.otp = otp
+                        if not update_item(existing_user):
+                            raise Exception(Error.USER_UPDATE_FAILED)
+                        dic = {}
+                        dic["is_otp_required"] = True
+                        return success(OTP_SUCCESS, dic)
+    except Exception as e:
+        return failure("Something went wrong.")
+
+###############################################################################################################################################################
+                                                                Login Function in Flask
+@app.route("/*Name of end point*",methods=[''])
 def user_records():
     try:
         data = request.get_json()
